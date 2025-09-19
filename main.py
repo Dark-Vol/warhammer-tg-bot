@@ -7,6 +7,54 @@ import os
 TOKEN: Final = "8493597534:AAHNuyfSW3SjUrtQmSNZyVTamzEnGlDUvbw"
 BOT_USERNAME: Final = "@regiment_builder_bot"
 
+# Функция для загрузки данных из JSON файлов
+def load_faction_data():
+    """Загружает данные о юнитах и их стоимости из JSON файлов"""
+    faction_data = {}
+    json_dir = "json"
+    
+    # Маппинг названий фракций
+    faction_mapping = {
+        "space marines": "Space Marines",
+        "orks": "Orks", 
+        "eldar": "Eldar",
+        "chaos space marines": "Chaos Space Marines",
+        "tyranyds": "Tyranids"
+    }
+    
+    for filename in os.listdir(json_dir):
+        if filename.endswith('.json'):
+            filepath = os.path.join(json_dir, filename)
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    
+                # Извлекаем данные из структуры JSON
+                for faction_key, faction_info in data.items():
+                    if faction_key in faction_mapping:
+                        mapped_faction = faction_mapping[faction_key]
+                        faction_data[mapped_faction] = {
+                            'name': faction_info.get('name', mapped_faction),
+                            'description': faction_info.get('description', ''),
+                            'units': []
+                        }
+                        
+                        # Извлекаем юниты из bases
+                        if 'bases' in faction_info:
+                            for unit_data in faction_info['bases']:
+                                faction_data[mapped_faction]['units'].append({
+                                    'name': unit_data['unit'],
+                                    'points': unit_data['points'],
+                                    'id': unit_data['id']
+                                })
+            except Exception as e:
+                print(f"Ошибка при загрузке {filename}: {e}")
+    
+    return faction_data
+
+# Загружаем данные из JSON файлов
+JSON_FACTION_DATA = load_faction_data()
+
 # Структуры данных для Warhammer
 class Unit:
     def __init__(self, name: str, points: int, category: str, faction: str, 
@@ -136,113 +184,74 @@ class Army:
         elif category == "Transport":
             self.transport_slots += change
 
-# База данных юнитов
-UNITS_DATABASE = {
-    "Space Marines": [
-        # HQ
-        Unit("Captain", 80, "HQ", "Space Marines", special_rules=["Aura of Command"]),
-        Unit("Lieutenant", 60, "HQ", "Space Marines", special_rules=["Tactical Precision"]),
-        Unit("Chaplain", 70, "HQ", "Space Marines", special_rules=["Litany of Hate"]),
-        Unit("Librarian", 90, "HQ", "Space Marines", special_rules=["Psychic Powers"]),
-        Unit("Techmarine", 50, "HQ", "Space Marines", special_rules=["Blessing of the Omnissiah"]),
-        # Troops
-        Unit("Tactical Squad", 100, "Troops", "Space Marines", min_size=5, max_size=10),
-        Unit("Intercessor Squad", 90, "Troops", "Space Marines", min_size=5, max_size=10),
-        Unit("Scout Squad", 70, "Troops", "Space Marines", min_size=5, max_size=10),
-        Unit("Infiltrator Squad", 120, "Troops", "Space Marines", min_size=5, max_size=10),
-        # Elites
-        Unit("Terminator Squad", 200, "Elites", "Space Marines", min_size=3, max_size=10),
-        Unit("Dreadnought", 140, "Elites", "Space Marines"),
-        Unit("Venerable Dreadnought", 160, "Elites", "Space Marines"),
-        Unit("Sternguard Veterans", 100, "Elites", "Space Marines", min_size=5, max_size=10),
-        Unit("Vanguard Veterans", 120, "Elites", "Space Marines", min_size=5, max_size=10),
-        Unit("Apothecary", 50, "Elites", "Space Marines", special_rules=["Narthecium"]),
-        # Fast Attack
-        Unit("Assault Squad", 120, "Fast Attack", "Space Marines", min_size=5, max_size=10),
-        Unit("Land Speeder", 80, "Fast Attack", "Space Marines"),
-        Unit("Attack Bike", 40, "Fast Attack", "Space Marines"),
-        Unit("Inceptor Squad", 110, "Fast Attack", "Space Marines", min_size=3, max_size=6),
-        # Heavy Support
-        Unit("Predator", 130, "Heavy Support", "Space Marines"),
-        Unit("Devastator Squad", 120, "Heavy Support", "Space Marines", min_size=5, max_size=10),
-        Unit("Hellblaster Squad", 110, "Heavy Support", "Space Marines", min_size=5, max_size=10),
-        Unit("Eliminator Squad", 75, "Heavy Support", "Space Marines", min_size=3, max_size=6),
-    ],
-    "Orks": [
-        # HQ
-        Unit("Warboss", 70, "HQ", "Orks", special_rules=["Waaagh!"]),
-        Unit("Big Mek", 60, "HQ", "Orks", special_rules=["Kustom Force Field"]),
-        Unit("Weirdboy", 50, "HQ", "Orks", special_rules=["Warp Powers"]),
-        Unit("Painboy", 40, "HQ", "Orks", special_rules=["Grot Orderly"]),
-        # Troops
-        Unit("Boyz", 60, "Troops", "Orks", min_size=10, max_size=30),
-        Unit("Gretchin", 30, "Troops", "Orks", min_size=10, max_size=30),
-        Unit("Beast Snagga Boyz", 100, "Troops", "Orks", min_size=10, max_size=20),
-        # Elites
-        Unit("Nobz", 100, "Elites", "Orks", min_size=5, max_size=10),
-        Unit("Meganobz", 150, "Elites", "Orks", min_size=3, max_size=10),
-        Unit("Kommandos", 80, "Elites", "Orks", min_size=5, max_size=15),
-        Unit("Tankbustas", 90, "Elites", "Orks", min_size=5, max_size=15),
-        Unit("Burna Boyz", 70, "Elites", "Orks", min_size=5, max_size=15),
-        # Fast Attack
-        Unit("Stormboyz", 80, "Fast Attack", "Orks", min_size=5, max_size=20),
-        Unit("Warbikers", 120, "Fast Attack", "Orks", min_size=3, max_size=12),
-        Unit("Squighog Boyz", 110, "Fast Attack", "Orks", min_size=3, max_size=9),
-        Unit("Deffkoptas", 60, "Fast Attack", "Orks", min_size=1, max_size=6),
-        # Heavy Support
-        Unit("Lootas", 100, "Heavy Support", "Orks", min_size=5, max_size=15),
-        Unit("Deff Dread", 100, "Heavy Support", "Orks"),
-        Unit("Killa Kans", 80, "Heavy Support", "Orks", min_size=1, max_size=6),
-        Unit("Mek Gunz", 50, "Heavy Support", "Orks", min_size=1, max_size=6),
-    ],
-    "Eldar": [
-        # HQ
-        Unit("Farseer", 90, "HQ", "Eldar", special_rules=["Runes of Fate"]),
-        Unit("Autarch", 70, "HQ", "Eldar", special_rules=["Path of Command"]),
-        Unit("Warlock", 40, "HQ", "Eldar", special_rules=["Runes of Battle"]),
-        Unit("Spiritseer", 60, "HQ", "Eldar", special_rules=["Runes of Battle"]),
-        # Troops
-        Unit("Guardian Defenders", 80, "Troops", "Eldar", min_size=10, max_size=20),
-        Unit("Rangers", 70, "Troops", "Eldar", min_size=5, max_size=10),
-        Unit("Dire Avengers", 70, "Troops", "Eldar", min_size=5, max_size=10),
-        # Elites
-        Unit("Wraithguard", 200, "Elites", "Eldar", min_size=5, max_size=10),
-        Unit("Howling Banshees", 100, "Elites", "Eldar", min_size=5, max_size=10),
-        Unit("Striking Scorpions", 90, "Elites", "Eldar", min_size=5, max_size=10),
-        Unit("Fire Dragons", 100, "Elites", "Eldar", min_size=5, max_size=10),
-        Unit("Wraithblades", 180, "Elites", "Eldar", min_size=5, max_size=10),
-        # Fast Attack
-        Unit("Swooping Hawks", 90, "Fast Attack", "Eldar", min_size=5, max_size=10),
-        Unit("Vypers", 60, "Fast Attack", "Eldar"),
-        Unit("Shining Spears", 120, "Fast Attack", "Eldar", min_size=3, max_size=6),
-        Unit("Warp Spiders", 100, "Fast Attack", "Eldar", min_size=5, max_size=10),
-        # Heavy Support
-        Unit("Falcon", 130, "Heavy Support", "Eldar"),
-        Unit("Fire Prism", 150, "Heavy Support", "Eldar"),
-        Unit("Wraithlord", 120, "Heavy Support", "Eldar"),
-        Unit("Dark Reapers", 100, "Heavy Support", "Eldar", min_size=5, max_size=10),
-    ],
-    "Chaos Space Marines": [
-        # HQ
-        Unit("Chaos Lord", 80, "HQ", "Chaos Space Marines", special_rules=["Dark Apostle"]),
-        Unit("Sorcerer", 90, "HQ", "Chaos Space Marines", special_rules=["Dark Hereticus"]),
-        Unit("Dark Apostle", 70, "HQ", "Chaos Space Marines", special_rules=["Dark Zealotry"]),
-        # Troops
-        Unit("Chaos Space Marines", 100, "Troops", "Chaos Space Marines", min_size=5, max_size=10),
-        Unit("Cultists", 50, "Troops", "Chaos Space Marines", min_size=10, max_size=20),
-        Unit("Khorne Berzerkers", 120, "Troops", "Chaos Space Marines", min_size=5, max_size=10),
-        # Elites
-        Unit("Chosen", 120, "Elites", "Chaos Space Marines", min_size=5, max_size=10),
-        Unit("Possessed", 140, "Elites", "Chaos Space Marines", min_size=5, max_size=10),
-        Unit("Terminators", 200, "Elites", "Chaos Space Marines", min_size=3, max_size=10),
-        # Fast Attack
-        Unit("Raptors", 100, "Fast Attack", "Chaos Space Marines", min_size=5, max_size=10),
-        Unit("Bikers", 80, "Fast Attack", "Chaos Space Marines", min_size=3, max_size=9),
-        # Heavy Support
-        Unit("Havocs", 100, "Heavy Support", "Chaos Space Marines", min_size=5, max_size=10),
-        Unit("Obliterators", 180, "Heavy Support", "Chaos Space Marines", min_size=1, max_size=3),
-    ]
-}
+# Функция для получения юнитов фракции из JSON данных
+def get_faction_units(faction_name: str) -> List[Unit]:
+    """Возвращает список юнитов для указанной фракции из JSON данных"""
+    units = []
+    
+    if faction_name not in JSON_FACTION_DATA:
+        return units
+    
+    faction_data = JSON_FACTION_DATA[faction_name]
+    
+    for unit_data in faction_data['units']:
+        # Определяем категорию юнита на основе названия (базовая логика)
+        category = "Troops"  # По умолчанию
+        min_size = 1
+        max_size = 1
+        
+        unit_name = unit_data['name'].lower()
+        points = unit_data['points']
+        
+        # Простая логика определения категории по названию
+        if any(word in unit_name for word in ['captain', 'lord', 'warboss', 'farseer', 'autarch', 'hive tyrant']):
+            category = "HQ"
+        elif any(word in unit_name for word in ['dreadnought', 'terminator', 'nobz', 'wraithguard', 'chosen', 'lictor', 'warrior', 'zoanthrope', 'venomthrope', 'malanthrope']):
+            category = "Elites"
+            if any(word in unit_name for word in ['terminator', 'warrior']):
+                min_size = 3
+                max_size = 10
+            elif any(word in unit_name for word in ['gaunt', 'genestealer']):
+                min_size = 5
+                max_size = 20
+        elif any(word in unit_name for word in ['squad', 'boyz', 'guardian', 'marines', 'termagant', 'hormagaunt', 'ripper swarm']):
+            category = "Troops"
+            if any(word in unit_name for word in ['squad', 'boyz', 'marines']):
+                min_size = 5
+                max_size = 10
+            elif any(word in unit_name for word in ['guardian']):
+                min_size = 10
+                max_size = 20
+            elif any(word in unit_name for word in ['gaunt', 'ripper']):
+                min_size = 10
+                max_size = 30
+        elif any(word in unit_name for word in ['assault', 'stormboyz', 'swooping', 'raptors', 'gargoyle']):
+            category = "Fast Attack"
+            min_size = 5
+            max_size = 10
+        elif any(word in unit_name for word in ['devastator', 'predator', 'lootas', 'dark reapers', 'carnifex', 'trygon', 'mawloc', 'tyrannofex', 'exocrine', 'haruspex', 'biovore', 'hive guard']):
+            category = "Heavy Support"
+            if any(word in unit_name for word in ['squad']):
+                min_size = 5
+                max_size = 10
+        
+        # Создаем объект Unit
+        unit = Unit(
+            name=unit_data['name'],
+            points=points,
+            category=category,
+            faction=faction_name,
+            min_size=min_size,
+            max_size=max_size
+        )
+        units.append(unit)
+    
+    return units
+
+# Функция для получения всех доступных фракций
+def get_available_factions() -> List[str]:
+    """Возвращает список доступных фракций из JSON данных"""
+    return list(JSON_FACTION_DATA.keys())
 
 # Хранилище армий пользователей
 user_armies: Dict[int, Army] = {}
@@ -264,6 +273,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /addunit <юнит> [количество] - Добавить юнит в армию
 /removeunit <юнит> - Удалить юнит из армии
 /units <фракция> - Показать доступные юниты фракции
+/unitcost <юнит> - Показать стоимость конкретного юнита
+/costs <фракция/юнит> - Показать стоимость всех юнитов фракции или конкретного юнита
+/coast <фракция/юнит> - Показать все юниты с поинтами (альтернатива /costs)
 /points - Показать информацию о поинтах
 /stats - Подробная статистика армии
 /export - Экспорт армии в текстовом формате
@@ -274,6 +286,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • Orks  
 • Eldar
 • Chaos Space Marines
+• Tyranids
 
 Начните с создания армии командой /newarmy!
         """
@@ -297,6 +310,17 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /units <фракция> - Показать юниты фракции
 • Пример: /units Space Marines
 
+/unitcost <юнит> - Показать стоимость юнита
+• Пример: /unitcost Dreadnought
+
+/costs <фракция/юнит> - Показать стоимость всех юнитов фракции или конкретного юнита
+• Пример: /costs Space Marines
+• Пример: /costs Dreadnought
+
+/coast <фракция/юнит> - Показать все юниты с поинтами
+• Пример: /coast Space Marines
+• Пример: /coast Hive Tyrant
+
 /points - Информация о поинтах
 
 /stats - Подробная статистика армии
@@ -305,7 +329,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 /clear - Очистить армию
 
-**Фракции:** Space Marines, Orks, Eldar, Chaos Space Marines
+**Фракции:** Space Marines, Orks, Eldar, Chaos Space Marines, Tyranids
         """
         await update.message.reply_text(help_text, parse_mode='Markdown')
 
@@ -327,8 +351,8 @@ async def newarmy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Поинты должны быть числом!")
             return
         
-        if faction not in UNITS_DATABASE:
-            available_factions = ", ".join(UNITS_DATABASE.keys())
+        if faction not in get_available_factions():
+            available_factions = ", ".join(get_available_factions())
             await update.message.reply_text(f"Фракция '{faction}' не найдена. Доступные: {available_factions}")
             return
         
@@ -402,14 +426,12 @@ async def addunit_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except ValueError:
                 pass
         
-        # Поиск юнита
+        # Поиск юнита в JSON данных
         unit = None
-        for faction_units in UNITS_DATABASE.values():
-            for u in faction_units:
-                if u.name.lower() == unit_name.lower() and u.faction == army.faction:
-                    unit = u
-                    break
-            if unit:
+        faction_units = get_faction_units(army.faction)
+        for u in faction_units:
+            if u.name.lower() == unit_name.lower():
+                unit = u
                 break
         
         if not unit:
@@ -450,15 +472,16 @@ async def units_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and context.args:
         faction = " ".join(context.args)
         
-        if faction not in UNITS_DATABASE:
-            available_factions = ", ".join(UNITS_DATABASE.keys())
+        if faction not in get_available_factions():
+            available_factions = ", ".join(get_available_factions())
             await update.message.reply_text(f"Фракция '{faction}' не найдена. Доступные: {available_factions}")
             return
         
         text = f"**{faction} - Доступные юниты:**\n\n"
         
         categories = {}
-        for unit in UNITS_DATABASE[faction]:
+        faction_units = get_faction_units(faction)
+        for unit in faction_units:
             if unit.category not in categories:
                 categories[unit.category] = []
             categories[unit.category].append(unit)
@@ -571,6 +594,131 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await update.message.reply_text(text, parse_mode='Markdown')
 
+async def unitcost_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда для просмотра стоимости конкретного юнита"""
+    if update.message and context.args:
+        unit_name = " ".join(context.args)
+        unit_found = False
+        
+        text = f"💰 **Поиск стоимости юнита: {unit_name}** 💰\n\n"
+        
+        # Ищем юнит во всех фракциях
+        for faction, faction_data in JSON_FACTION_DATA.items():
+            for unit in faction_data['units']:
+                if unit_name.lower() in unit['name'].lower():
+                    unit_found = True
+                    text += f"**{unit['name']}** ({faction})\n"
+                    text += f"💰 Стоимость: {unit['points']} поинтов\n\n"
+        
+        if not unit_found:
+            text += "❌ Юнит не найден!\n\n"
+            text += "**Доступные фракции для поиска:**\n"
+            for faction in JSON_FACTION_DATA.keys():
+                text += f"• {faction}\n"
+            text += "\nПопробуйте использовать /costs <фракция> для просмотра всех юнитов фракции"
+        
+        await update.message.reply_text(text, parse_mode='Markdown')
+
+async def costs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда для просмотра стоимости юнитов фракции или конкретного юнита"""
+    if update.message and context.args:
+        args_text = " ".join(context.args)
+        
+        # Сначала проверяем, является ли это фракцией
+        faction_found = False
+        for faction, faction_data in JSON_FACTION_DATA.items():
+            if args_text.lower() in faction.lower():
+                faction_found = True
+                text = f"💰 **Стоимость юнитов: {faction}** 💰\n\n"
+                
+                if faction_data['description']:
+                    text += f"*{faction_data['description']}*\n\n"
+                
+                # Сортируем юниты по стоимости
+                sorted_units = sorted(faction_data['units'], key=lambda x: x['points'])
+                
+                for unit in sorted_units:
+                    text += f"• **{unit['name']}** - {unit['points']} поинтов\n"
+                
+                text += f"\n📊 Всего юнитов: {len(faction_data['units'])}"
+                break
+        
+        if faction_found:
+            await update.message.reply_text(text, parse_mode='Markdown')
+            return
+        
+        # Если не найдена фракция, ищем конкретный юнит
+        unit_found = False
+        text = f"💰 **Поиск юнита: {args_text}** 💰\n\n"
+        
+        for faction, faction_data in JSON_FACTION_DATA.items():
+            for unit in faction_data['units']:
+                if args_text.lower() in unit['name'].lower():
+                    unit_found = True
+                    text += f"**{unit['name']}** ({faction})\n"
+                    text += f"💰 Стоимость: {unit['points']} поинтов\n\n"
+        
+        if not unit_found:
+            text += "❌ Юнит не найден!\n\n"
+            text += "**Доступные фракции:**\n"
+            for faction in JSON_FACTION_DATA.keys():
+                text += f"• {faction}\n"
+            text += "\n**Использование:**\n"
+            text += "• `/costs <фракция>` - показать все юниты фракции\n"
+            text += "• `/costs <юнит>` - найти конкретный юнит"
+        
+        await update.message.reply_text(text, parse_mode='Markdown')
+
+async def coast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда для просмотра юнитов с поинтами (фракция или конкретный юнит)"""
+    if update.message and context.args:
+        args_text = " ".join(context.args)
+        
+        # Сначала проверяем, является ли это фракцией
+        faction_found = False
+        for faction, faction_data in JSON_FACTION_DATA.items():
+            if args_text.lower() in faction.lower():
+                faction_found = True
+                text = f"💰 **Все юниты с поинтами: {faction}** 💰\n\n"
+                
+                if faction_data['description']:
+                    text += f"*{faction_data['description']}*\n\n"
+                
+                # Сортируем юниты по стоимости
+                sorted_units = sorted(faction_data['units'], key=lambda x: x['points'])
+                
+                for unit in sorted_units:
+                    text += f"• **{unit['name']}** - {unit['points']} поинтов\n"
+                
+                text += f"\n📊 Всего юнитов: {len(faction_data['units'])}"
+                break
+        
+        if faction_found:
+            await update.message.reply_text(text, parse_mode='Markdown')
+            return
+        
+        # Если не найдена фракция, ищем конкретный юнит
+        unit_found = False
+        text = f"💰 **Поиск юнита: {args_text}** 💰\n\n"
+        
+        for faction, faction_data in JSON_FACTION_DATA.items():
+            for unit in faction_data['units']:
+                if args_text.lower() in unit['name'].lower():
+                    unit_found = True
+                    text += f"**{unit['name']}** ({faction})\n"
+                    text += f"💰 Стоимость: {unit['points']} поинтов\n\n"
+        
+        if not unit_found:
+            text += "❌ Юнит не найден!\n\n"
+            text += "**Доступные фракции:**\n"
+            for faction in JSON_FACTION_DATA.keys():
+                text += f"• {faction}\n"
+            text += "\n**Использование:**\n"
+            text += "• `/coast <фракция>` - показать все юниты фракции\n"
+            text += "• `/coast <юнит>` - найти конкретный юнит"
+        
+        await update.message.reply_text(text, parse_mode='Markdown')
+
 # Message handler
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
@@ -610,6 +758,9 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("addunit", addunit_command))
     app.add_handler(CommandHandler("removeunit", removeunit_command))
     app.add_handler(CommandHandler("units", units_command))
+    app.add_handler(CommandHandler("unitcost", unitcost_command))
+    app.add_handler(CommandHandler("costs", costs_command))
+    app.add_handler(CommandHandler("coast", coast_command))
     app.add_handler(CommandHandler("points", points_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(CommandHandler("export", export_command))
