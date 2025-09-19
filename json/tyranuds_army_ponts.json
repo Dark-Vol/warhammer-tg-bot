@@ -17,9 +17,8 @@
                 "max_value": 0,
                 "step_value": 1
             }
-        ]
-    },
-    "bases": [
+        ],
+        "bases": [
         {
             "id": 1,
             "unit": "Termagant",
@@ -130,5 +129,6 @@
             "unit": "Norm Emissary",
             "points": 285
         }
-    ]
+        ]
+    }
 }
