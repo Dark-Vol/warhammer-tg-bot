@@ -1,0 +1,134 @@
+{
+    "tyranyds": {
+        "id": "tyranuds_army_ponts",
+        "name": "Tyranids Army Points",
+        "description": "Points for Tyranids army",
+        "type": "points",
+        "source": "Tyranids Codex",
+        "faction_id": "TYR",
+        "army_id": "TYR",
+        "values": [
+            {
+                "id": "tyranids_army_ponts_value",
+                "name": "Tyranids Army Points",
+                "value": 0,
+                "default_value": 0,
+                "min_value": 0,
+                "max_value": 0,
+                "step_value": 1
+            }
+        ]
+    },
+    "bases": [
+        {
+            "id": 1,
+            "unit": "Termagant",
+            "points": 5
+        },
+        {
+            "id": 2,
+            "unit": "Hormagaunt",
+            "points": 5
+        },
+        {
+            "id": 3,
+            "unit": "Genestealer",
+            "points": 10
+        },
+        {
+            "id": 4,
+            "unit": "Ripper Swarm",
+            "points": 5
+        },
+        {
+            "id": 5,
+            "unit": "Tyranid Warrior",
+            "points": 20
+        },
+        {
+            "id": 6,
+            "unit": "Lictor",
+            "points": 30
+        },
+        {
+            "id": 7,
+            "unit": "Carnifex",
+            "points": 85
+        },
+        {
+            "id": 8,
+            "unit": "Hive Tyrant",
+            "points": 150
+        },
+        {
+            "id": 9,
+            "unit": "Trygon",
+            "points": 130
+        },
+        {
+            "id": 10,
+            "unit": "Mawloc",
+            "points": 200
+        },
+        {
+            "id": 11,
+            "unit": "Tyrannofex",
+            "points": 175
+        },
+        {
+            "id": 12,
+            "unit": "Exocrine",
+            "points": 160
+        },
+        {
+            "id": 13,
+            "unit": "Haruspex",
+            "points": 120
+        },
+        {
+            "id": 14,
+            "unit": "Zoanthrope",
+            "points": 70
+        },
+        {
+            "id": 15,
+            "unit": "Venomthrope",
+            "points": 50
+        },
+        {
+            "id": 16,
+            "unit": "Biovore",
+            "points": 60
+        },
+        {
+            "id": 17,
+            "unit": "Spore Mine",
+            "points": 15
+        },
+        {
+            "id": 18,
+            "unit": "Hive Guard",
+            "points": 90
+        },
+        {
+            "id": 19,
+            "unit": "Devilgaunt",
+            "points": 80
+        },
+        {
+            "id": 20,
+            "unit": "Gargoyle",
+            "points": 25
+        },
+        {
+            "id": 21,
+            "unit": "Malanthrope",
+            "points": 100
+        },
+        {
+            "id": 22,
+            "unit": "Norm Emissary",
+            "points": 285
+        }
+    ]
+}

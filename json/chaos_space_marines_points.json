@@ -1,0 +1,64 @@
+{
+    "chaos space marines": {
+        "id": "chaos space marines army",
+        "name": "Chaos Space Marines Army",
+        "description": "Points for Chaos Space Marines army",
+        "type": "points",
+        "source": "Chaos Space Marines Codex",
+        "faction_id": "TYR",
+        "army_id": "TYR",
+        "values": [
+            {
+                "id": "space_marines_army_points_value",
+                "name": "Chaos Space Marines Army Points",
+                "value": 0,
+                "default_value": 0,
+                "min_value": 0,
+                "max_value": 0,
+                "step_value": 1
+            }
+        ],
+        "bases": [
+            {
+                "id": 1,
+                "unit": "Intercessor Squad",
+                "points": 20
+            },
+            {
+                "id": 2,
+                "unit": "Tactical Squad",
+                "points": 15
+            },
+            {
+                "id": 3,
+                "unit": "Assault Squad",
+                "points": 25
+            },
+            {
+                "id": 4,
+                "unit": "Devastator Squad",
+                "points": 30
+            },
+            {
+                "id": 5,
+                "unit": "Dreadnought",
+                "points": 100
+            },
+            {
+                "id": 6,
+                "unit": "Land Raider",
+                "points": 200
+            },
+            {
+                "id": 7,
+                "unit": "Rhino",
+                "points": 50
+            },
+            {
+                "id": 8,
+                "unit": "Predator",
+                "points": 120
+            }
+        ]
+    }
+}
