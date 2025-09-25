@@ -1,8 +1,9 @@
 from typing import Final, Dict, List, Optional
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 import json
 import os
+from datetime import datetime
 
 TOKEN: Final = "8493597534:AAHNuyfSW3SjUrtQmSNZyVTamzEnGlDUvbw"
 BOT_USERNAME: Final = "@regiment_builder_bot"
@@ -11,7 +12,7 @@ BOT_USERNAME: Final = "@regiment_builder_bot"
 def load_faction_data():
     """Загружает данные о юнитах и их стоимости из JSON файлов"""
     faction_data = {}
-    json_dir = "json"
+    json_dir = "json/point army"
     
     # Маппинг названий фракций
     faction_mapping = {
@@ -22,38 +23,42 @@ def load_faction_data():
         "tyranyds": "Tyranids"
     }
     
-    for filename in os.listdir(json_dir):
-        if filename.endswith('.json'):
-            filepath = os.path.join(json_dir, filename)
-            try:
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    
-                # Извлекаем данные из структуры JSON
-                for faction_key, faction_info in data.items():
-                    if faction_key in faction_mapping:
-                        mapped_faction = faction_mapping[faction_key]
-                        faction_data[mapped_faction] = {
-                            'name': faction_info.get('name', mapped_faction),
-                            'description': faction_info.get('description', ''),
-                            'units': []
-                        }
+    try:
+        for filename in os.listdir(json_dir):
+            if filename.endswith('.json'):
+                filepath = os.path.join(json_dir, filename)
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
                         
-                        # Извлекаем юниты из bases
-                        if 'bases' in faction_info:
-                            for unit_data in faction_info['bases']:
-                                faction_data[mapped_faction]['units'].append({
-                                    'name': unit_data['unit'],
-                                    'points': unit_data['points'],
-                                    'id': unit_data['id']
-                                })
-            except Exception as e:
-                print(f"Ошибка при загрузке {filename}: {e}")
+                    # Извлекаем данные из структуры JSON
+                    for faction_key, faction_info in data.items():
+                        if faction_key in faction_mapping:
+                            mapped_faction = faction_mapping[faction_key]
+                            faction_data[mapped_faction] = {
+                                'name': faction_info.get('name', mapped_faction),
+                                'description': faction_info.get('description', ''),
+                                'units': []
+                            }
+                            
+                            # Извлекаем юниты из bases
+                            if 'bases' in faction_info:
+                                for unit_data in faction_info['bases']:
+                                    faction_data[mapped_faction]['units'].append({
+                                        'name': unit_data['unit'],
+                                        'points': unit_data['points'],
+                                        'id': unit_data['id']
+                                    })
+                except Exception as e:
+                    print(f"Ошибка при загрузке {filename}: {e}")
+    except FileNotFoundError:
+        print(f"Папка {json_dir} не найдена!")
     
     return faction_data
 
 # Загружаем данные из JSON файлов
 JSON_FACTION_DATA = load_faction_data()
+print(f"Загружены фракции: {list(JSON_FACTION_DATA.keys())}")
 
 # Структуры данных для Warhammer
 class Unit:
@@ -256,15 +261,98 @@ def get_available_factions() -> List[str]:
 # Хранилище армий пользователей
 user_armies: Dict[int, Army] = {}
 
+# Функции для работы с данными пользователей
+def load_users_data():
+    """Загружает данные пользователей из JSON файла"""
+    users_file = "json/create army/users_data.json"
+    try:
+        with open(users_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"users": {}}
+
+def save_users_data(data):
+    """Сохраняет данные пользователей в JSON файл"""
+    users_file = "json/create army/users_data.json"
+    with open(users_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def is_user_registered(user_id: int) -> bool:
+    """Проверяет, зарегистрирован ли пользователь"""
+    users_data = load_users_data()
+    return str(user_id) in users_data["users"]
+
+def register_user(user_id: int, username: str, player_type: str, contact: str = None):
+    """Регистрирует нового пользователя"""
+    users_data = load_users_data()
+    users_data["users"][str(user_id)] = {
+        "username": username,
+        "player_type": player_type,
+        "contact": contact,
+        "registration_date": datetime.now().isoformat(),
+        "armies": []
+    }
+    save_users_data(users_data)
+
+def get_user_data(user_id: int):
+    """Получает данные пользователя"""
+    users_data = load_users_data()
+    return users_data["users"].get(str(user_id))
+
+def save_user_army(user_id: int, faction: str, points: int):
+    """Сохраняет армию пользователя в JSON"""
+    users_data = load_users_data()
+    if str(user_id) not in users_data["users"]:
+        return False
+    
+    army_data = {
+        "faction": faction,
+        "points": points,
+        "created_date": datetime.now().isoformat(),
+        "units": []
+    }
+    
+    users_data["users"][str(user_id)]["armies"].append(army_data)
+    save_users_data(users_data)
+    return True
+
 
 # Command handlers
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         user_id = update.message.from_user.id
-        welcome_text = """
+        username = update.message.from_user.username or update.message.from_user.first_name
+        
+        # Проверяем, зарегистрирован ли пользователь
+        if not is_user_registered(user_id):
+            # Показываем клавиатуру для выбора типа игрока
+            keyboard = [
+                [InlineKeyboardButton("🆕 Новый игрок", callback_data="new_player")],
+                [InlineKeyboardButton("🎖️ Опытный игрок", callback_data="experienced_player")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            welcome_text = """
 🎖️ **Добро пожаловать в Warhammer Army Builder!** 🎖️
 
 Я помогу вам создать армию для Warhammer 40k по поинтам.
+
+**Выберите ваш тип:**
+🆕 **Новый игрок** - если вы только начинаете играть в Warhammer 40k
+🎖️ **Опытный игрок** - если у вас уже есть опыт игры
+
+После регистрации вы сможете создавать и сохранять свои армии!
+            """
+            await update.message.reply_text(welcome_text, parse_mode='Markdown', reply_markup=reply_markup)
+        else:
+            # Пользователь уже зарегистрирован
+            user_data = get_user_data(user_id)
+            player_type_emoji = "🆕" if user_data["player_type"] == "new_player" else "🎖️"
+            
+            welcome_text = f"""
+{player_type_emoji} **Добро пожаловать обратно, {username}!** {player_type_emoji}
+
+Вы зарегистрированы как: **{user_data["player_type"].replace("_", " ").title()}**
 
 **Доступные команды:**
 /help - Показать все команды
@@ -289,8 +377,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • Tyranids
 
 Начните с создания армии командой /newarmy!
-        """
-        await update.message.reply_text(welcome_text, parse_mode='Markdown')
+            """
+            await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
@@ -340,6 +428,13 @@ async def newarmy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         user_id = update.message.from_user.id
         
+        # Проверяем, зарегистрирован ли пользователь
+        if not is_user_registered(user_id):
+            await update.message.reply_text(
+                "❌ Вы не зарегистрированы! Используйте команду /start для регистрации."
+            )
+            return
+        
         if len(context.args) < 2:
             await update.message.reply_text("Использование: /newarmy <фракция> <поинты>\nПример: /newarmy Space Marines 2000")
             return
@@ -360,8 +455,19 @@ async def newarmy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Поинты должны быть от 500 до 3000!")
             return
         
+        # Создаем армию в памяти
         user_armies[user_id] = Army(faction, points)
-        await update.message.reply_text(f"✅ Создана новая армия {faction} на {points} поинтов!")
+        
+        # Сохраняем армию в JSON
+        if save_user_army(user_id, faction, points):
+            await update.message.reply_text(
+                f"✅ **Создана новая армия {faction} на {points} поинтов!**\n\n"
+                f"Армия сохранена в вашем профиле. Теперь вы можете добавлять юниты командой /addunit.\n\n"
+                f"Используйте /listarmy для просмотра армии или /units {faction} для просмотра доступных юнитов.",
+                parse_mode='Markdown'
+            )
+        else:
+            await update.message.reply_text(f"✅ Создана новая армия {faction} на {points} поинтов!")
 
 async def listarmy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
@@ -719,13 +825,88 @@ async def coast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await update.message.reply_text(text, parse_mode='Markdown')
 
+# Callback query handler для обработки нажатий на inline кнопки
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    username = query.from_user.username or query.from_user.first_name
+    
+    if query.data == "new_player":
+        # Отправляем новое сообщение с клавиатурой для контакта
+        contact_keyboard = ReplyKeyboardMarkup(
+            [[KeyboardButton("📱 Поделиться контактом", request_contact=True)]],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+        
+        await query.message.reply_text(
+            "🆕 **Отлично! Вы выбрали \"Новый игрок\"**\n\n"
+            "Для завершения регистрации, пожалуйста, поделитесь своим контактом, "
+            "нажав на кнопку ниже. Это поможет нам связаться с вами при необходимости.\n\n"
+            "📱 Нажмите на кнопку ниже:",
+            parse_mode='Markdown',
+            reply_markup=contact_keyboard
+        )
+        
+        # Сохраняем состояние ожидания контакта
+        context.user_data['waiting_for_contact'] = True
+        context.user_data['player_type'] = 'new_player'
+        
+    elif query.data == "experienced_player":
+        # Регистрируем опытного игрока без запроса контакта
+        register_user(user_id, username, "experienced_player")
+        
+        await query.edit_message_text(
+            "🎖️ **Отлично! Вы зарегистрированы как опытный игрок!**\n\n"
+            "Теперь вы можете создавать и сохранять свои армии.\n\n"
+            "Используйте команду /newarmy <фракция> <поинты> для создания армии.\n"
+            "Например: /newarmy Space Marines 2000",
+            parse_mode='Markdown'
+        )
+
 # Message handler
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         message_type: str = update.message.chat.type
         user_message: str = update.message.text if update.message.text is not None else ""
+        user_id = update.message.from_user.id
+        username = update.message.from_user.username or update.message.from_user.first_name
         
         print(f"Message type: ({update.message.chat.id}) in {message_type}: '{user_message}'")
+        
+        # Проверяем, ожидаем ли мы контакт от пользователя
+        if context.user_data.get('waiting_for_contact', False):
+            if update.message.contact:
+                # Получаем контакт
+                contact_info = f"{update.message.contact.phone_number}"
+                if update.message.contact.first_name:
+                    contact_info += f" ({update.message.contact.first_name})"
+                
+                # Регистрируем пользователя
+                register_user(user_id, username, context.user_data['player_type'], contact_info)
+                
+                # Очищаем состояние
+                context.user_data.pop('waiting_for_contact', None)
+                context.user_data.pop('player_type', None)
+                
+                # Убираем клавиатуру и отправляем подтверждение
+                remove_keyboard = ReplyKeyboardMarkup([[]], resize_keyboard=True, one_time_keyboard=True)
+                await update.message.reply_text(
+                    "✅ **Регистрация завершена!**\n\n"
+                    "Ваш контакт сохранен. Теперь вы можете создавать и сохранять свои армии.\n\n"
+                    "Используйте команду /newarmy <фракция> <поинты> для создания армии.\n"
+                    "Например: /newarmy Space Marines 2000",
+                    parse_mode='Markdown',
+                    reply_markup=remove_keyboard
+                )
+                return
+            else:
+                await update.message.reply_text(
+                    "Пожалуйста, поделитесь контактом, нажав на кнопку \"📱 Поделиться контактом\""
+                )
+                return
         
         # Простые ответы на общие вопросы
         processed_text = user_message.lower()
@@ -766,8 +947,11 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("export", export_command))
     app.add_handler(CommandHandler("clear", clear_command))
     
+    # Callback query handler
+    app.add_handler(CallbackQueryHandler(button_callback))
+    
     # Message handler
-    app.add_handler(MessageHandler(filters.TEXT, handle_message))
+    app.add_handler(MessageHandler(filters.TEXT | filters.CONTACT, handle_message))
     
     # Error handler
     app.add_error_handler(error)
