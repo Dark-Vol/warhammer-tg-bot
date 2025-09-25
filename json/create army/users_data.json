@@ -1,0 +1,18 @@
+{
+  "users": {
+    "687193702": {
+      "username": "NikitaVav",
+      "player_type": "new_player",
+      "contact": "+380505799437 (Никита Вавилов)",
+      "registration_date": "2025-09-25T21:48:58.923728",
+      "armies": [
+        {
+          "faction": "Tyranids",
+          "points": 500,
+          "created_date": "2025-09-25T21:53:11.608887",
+          "units": []
+        }
+      ]
+    }
+  }
+}
